@@ -1,0 +1,42 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:12
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: deploy_manager
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: deploy_manager_development
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Ruby
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: 2.7
+    - name: Install dependencies
+      run: bundle install
+    - name: Run tests
+      env:
+        DATABASE_URL: postgres://deploy_manager:password@localhost:5432/deploy_manager_test
+      run: bundle exec rspec
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Deploy to Elastic Beanstalk
+      run: eb deploy
